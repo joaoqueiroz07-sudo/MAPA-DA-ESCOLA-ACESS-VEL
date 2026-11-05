@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mapa Escolar Acessível - Guia da Escola</title>
+  
+  <!-- Importação do Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Fonte Inter para legibilidade WCAG -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            school: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              500: '#0ea5e9',
+              700: '#0369a1',
+              800: '#075985',
+              900: '#0c4a6e',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Estilos de foco visível bem marcado (WCAG 2.4.7) */
+    :focus-visible {
+      outline: 4px solid #0284c7 !important;
+      outline-offset: 4px !important;
+      border-radius: 8px;
+    }
+
+    /* Estilos para o Modo de Alto Contraste */
+    body.high-contrast {
+      background-color: #000000 !important;
+      color: #ffffff !important;
+    }
+
+    body.high-contrast header,
+    body.high-contrast footer,
+    body.high-contrast .bg-card,
+    body.high-contrast .bg-box,
+    body.high-contrast .room-btn {
+      background-color: #000000 !important;
+      border-color: #ffff00 !important;
+      color: #ffffff !important;
+    }
+
+    body.high-contrast a,
+    body.high-contrast button {
+      color: #ffff00 !important;
+    }
+
+    body.high-contrast .badge-contrast {
+      background-color: #ffff00 !important;
+      color: #000000 !important;
+      font-weight: 900;
+    }
+
+    body.high-contrast :focus-visible {
+      outline: 5px solid #ffff00 !important;
+      outline-offset: 4px !important;
+    }
+
+    /* Suporte a prefers-reduced-motion */
+    @media (prefers-reduced-motion: reduce) {
+      *, ::before, ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+
+    /* Atalho invisível ativado via Tab */
+    .sr-only-focusable:not(:focus):not(:focus-within) {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border-width: 0;
+    }
+
+    /* Indicador ativo do mapa */
+    .room-selected {
+      ring: 4px;
+      ring-color: #0284c7;
+      transform: scale(1.02);
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-900 font-sans antialiased min-h-screen flex flex-col transition-colors duration-200">
+
+  <!-- Anunciador dinâmico para Leitores de Tela -->
+  <div id="sr-announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Atalhos rápidos de teclado -->
+  <div class="flex gap-2">
+    <a href="#conteudo-principal" class="sr-only-focusable fixed top-2 left-2 z-50 bg-amber-400 text-slate-950 px-4 py-3 rounded-lg font-bold shadow-xl focus:outline-none">
+      Ir para o Conteúdo Principal
+    </a>
+    <a href="#mapa-interativo" class="sr-only-focusable fixed top-2 left-44 z-50 bg-sky-400 text-slate-950 px-4 py-3 rounded-lg font-bold shadow-xl focus:outline-none">
+      Ir direto para o Mapa da Escola
+    </a>
+  </div>
+
+  <!-- BARRA DE FERRAMENTAS DE ACESSIBILIDADE SUPERIOR -->
+  <aside class="bg-slate-900 text-slate-100 py-2.5 px-4 border-b border-slate-800" aria-label="Painel de Ferramentas de Acessibilidade">
+    <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center text-sm gap-3">
+      <div class="flex items-center space-x-2">
+        <span class="text-base" aria-hidden="true">♿</span>
+        <span class="font-semibold" id="access-tools-label">Acessibilidade da Página:</span>
+      </div>
+      <div class="flex flex-wrap items-center gap-2" role="toolbar" aria-labelledby="access-tools-label">
+        <span class="text-xs text-slate-400 font-medium mr-1">Tamanho do texto:</span>
+        <button id="btn-decrease-font" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 rounded text-xs font-bold border border-slate-700" aria-label="Diminuir tamanho do texto">
+          A-
+        </button>
+        <button id="btn-reset-font" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 rounded text-xs font-bold border border-slate-700" aria-label="Redefinir tamanho padrão do texto">
+          A (Padrão)
+        </button>
+        <button id="btn-increase-font" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 rounded text-xs font-bold border border-slate-700" aria-label="Aumentar tamanho do texto">
+          A+
+        </button>
+
+        <span class="text-slate-700 hidden sm:inline">|</span>
+
+        <!-- Botão Alto Contraste -->
+        <button id="btn-toggle-contrast" class="px-3 py-1 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold rounded text-xs transition-colors shadow-sm" aria-pressed="false">
+          👁️ Alto Contraste
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- CABEÇALHO E MENU DE NAVEGAÇÃO -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm transition-colors duration-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-20">
+        
+        <!-- Logotipo e Nome do Projeto -->
+        <div class="flex items-center space-x-3">
+          <div class="w-11 h-11 bg-school-800 text-white rounded-xl flex items-center justify-center font-extrabold text-2xl shadow border border-school-900" aria-hidden="true">
+            🏫
+          </div>
+          <div>
+            <span class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight block leading-none">
+              Mapa Escolar Acessível
+            </span>
+            <span class="text-xs text-slate-600 font-medium mt-1 block">
+              Localização simples e autonomia no ambiente escolar
+            </span>
+          </div>
+        </div>
+
+        <!-- Navegação Desktop (WCAG Menu Previsível) -->
+        <nav class="hidden md:flex space-x-1" aria-label="Menu de Navegação Principal">
+          <a href="#inicio" class="px-3.5 py-2 text-slate-800 font-bold hover:text-school-700 rounded-lg hover:bg-slate-100 transition-colors">Início</a>
+          <a href="#mapa" class="px-3.5 py-2 text-slate-800 font-bold hover:text-school-700 rounded-lg hover:bg-slate-100 transition-colors">Mapa</a>
+          <a href="#ambientes" class="px-3.5 py-2 text-slate-800 font-bold hover:text-school-700 rounded-lg hover:bg-slate-100 transition-colors">Ambientes</a>
+          <a href="#acessibilidade" class="px-3.5 py-2 text-slate-800 font-bold hover:text-school-700 rounded-lg hover:bg-slate-100 transition-colors">Acessibilidade</a>
+          <a href="#sobre" class="px-3.5 py-2 text-slate-800 font-bold hover:text-school-700 rounded-lg hover:bg-slate-100 transition-colors">Sobre</a>
+        </nav>
+
+        <!-- Botão Menu Mobile -->
+        <div class="md:hidden">
+          <button id="mobile-menu-btn" type="button" class="p-2.5 text-slate-800 hover:text-school-700 hover:bg-slate-100 rounded-xl focus:outline-none border border-slate-300" aria-expanded="false" aria-controls="mobile-menu" aria-label="Abrir menu de navegação">
+            <svg id="menu-icon-open" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+            <svg id="menu-icon-close" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Menu Mobile Expansível -->
+      <nav id="mobile-menu" class="hidden md:hidden py-4 border-t border-slate-200 space-y-2" aria-label="Menu Principal Mobile">
+        <a href="#inicio" class="mobile-nav-link block px-4 py-2.5 text-base font-bold text-slate-800 hover:bg-school-50 hover:text-school-800 rounded-lg">Início</a>
+        <a href="#mapa" class="mobile-nav-link block px-4 py-2.5 text-base font-bold text-slate-800 hover:bg-school-50 hover:text-school-800 rounded-lg">Mapa Interativo</a>
+        <a href="#ambientes" class="mobile-nav-link block px-4 py-2.5 text-base font-bold text-slate-800 hover:bg-school-50 hover:text-school-800 rounded-lg">Lista de Ambientes</a>
+        <a href="#acessibilidade" class="mobile-nav-link block px-4 py-2.5 text-base font-bold text-slate-800 hover:bg-school-50 hover:text-school-800 rounded-lg">Recursos de Acessibilidade</a>
+        <a href="#sobre" class="mobile-nav-link block px-4 py-2.5 text-base font-bold text-slate-800 hover:bg-school-50 hover:text-school-800 rounded-lg">Sobre o Projeto</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- CONTEÚDO PRINCIPAL -->
+  <main id="conteudo-principal" class="flex-grow focus:outline-none" tabindex="-1">
+
+    <!-- HERO SECTION -->
+    <section id="inicio" class="bg-gradient-to-b from-sky-100 via-slate-50 to-slate-100 py-12 md:py-16 border-b border-slate-200">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 text-center space-y-6">
+        
+        <span class="inline-flex items-center gap-2 bg-white text-school-900 px-4 py-1.5 rounded-full text-xs sm:text-sm font-extrabold shadow-sm border border-slate-300">
+          <span>🗺️</span> Guia de Orientação Espacial Inclusiva
+        </span>
+
+        <h1 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight">
+          Explore o Mapa da Nossa Escola
+        </h1>
+
+        <p class="text-base sm:text-xl text-slate-700 max-w-3xl mx-auto font-medium leading-relaxed">
+          Encontre salas, secretarias, biblioteca e áreas de convivência através de uma interface interativa com símbolos, alto contraste e descrições claras para todos os estudantes e visitantes.
+        </p>
+
+        <!-- Campo de Busca Rápida de Sala -->
+        <div class="max-w-2xl mx-auto pt-2">
+          <form role="search" onsubmit="event.preventDefault();" class="flex flex-col sm:flex-row gap-3">
+            <div class="relative flex-grow">
+              <label for="room-search" class="sr-only">Buscar ambiente da escola por nome ou função</label>
+              <input type="search" id="room-search" placeholder="Qual ambiente você está procurando? (ex: Biblioteca, Banheiro...)" class="w-full px-5 py-3.5 pl-12 text-slate-900 bg-white border-2 border-slate-300 rounded-xl focus:border-school-700 shadow-sm text-base font-medium">
+              <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 text-lg" aria-hidden="true">
+                🔍
+              </div>
+            </div>
+            <button type="button" id="btn-clear-search" class="px-5 py-3.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl transition-colors text-base shadow">
+              Limpar Busca
+            </button>
+          </form>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SEÇÃO MAPA INTERATIVO (GRID PLANTA BAIXA DA ESCOLA) -->
+    <section id="mapa" class="py-12 bg-white border-b border-slate-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        
+        <div class="text-center space-y-2">
+          <h2 class="text-2xl sm:text-4xl font-extrabold text-slate-900">
+            Planta Baixa Interativa da Escola
+          </h2>
+          <p class="text-slate-600 text-base sm:text-lg max-w-3xl mx-auto">
+            Clique ou navegue com a tecla <kbd class="px-2 py-0.5 bg-slate-200 rounded text-xs font-mono">Tab</kbd> nos ambientes do mapa abaixo para visualizar sua localização e descrição detalhada.
+          </p>
+        </div>
+
+        <!-- LAYOUT VISUAL DO MAPA (PLANTA ESCOLAR ORGANIZADA POR ZONAS) -->
+        <div id="mapa-interativo" class="bg-slate-900 p-4 sm:p-8 rounded-3xl shadow-2xl border-4 border-slate-800 space-y-6">
+          
+          <div class="flex flex-wrap justify-between items-center text-slate-200 border-b border-slate-800 pb-4 gap-2">
+            <span class="text-sm font-bold flex items-center gap-2">
+              <span class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse" aria-hidden="true"></span>
+              Visualização Geral do Terreno Escolar
+            </span>
+            <span class="text-xs text-slate-400 bg-slate-800 px-3 py-1 rounded-full font-mono">
+              Orientação: Entrada ao Sul / Pátio ao Norte
+            </span>
+          </div>
+
+          <!-- GRID DA PLANTA BAIXA COM OS 8 AMBIENTES REQUERIDOS -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6" role="region" aria-label="Mapa de Salas e Setores da Escola">
+            
+            <!-- 1. Entrada -->
+            <button id="map-btn-entrada" onclick="selectRoom('entrada')" class="room-btn bg-amber-500 hover:bg-amber-400 text-slate-950 p-5 rounded-2xl font-bold flex flex-col justify-between h-40 border-4 border-amber-600 transition-all text-left shadow-lg group focus:outline-none" aria-label="Ambiente 1: Entrada. Ponto de acesso principal e recepção.">
+              <div class="flex justify-between items-start w-full">
+                <span class="text-3xl" aria-hidden="true">🏫</span>
+                <span class="badge-contrast text-xs bg-slate-950 text-amber-300 font-extrabold px-2.5 py-1 rounded-full">Zona Sul</span>
+              </div>
+              <div>
+                <h3 class="text-xl font-black">1. Entrada</h3>
+                <p class="text-xs font-semibold opacity-90 mt-1">Acesso &amp; Portaria Principal</p>
+              </div>
+            </button>
+
+            <!-- 2. Secretaria -->
+            <button id="map-btn-secretaria" onclick="selectRoom('secretaria')" class="room-btn bg-blue-600 hover:bg-blue-500 text-white p-5 rounded-2xl font-bold flex flex-col justify-between h-40 border-4 border-blue-700 transition-all text-left shadow-lg group focus:outline-none" aria-label="Ambiente 2: Secretaria. Atendimento administrativo e matrículas.">
+              <div class="flex justify-between items-start w-full">
+                <span class="text-3xl" aria-hidden="true">🏢</span>
+                <span class="badge-contrast text-xs bg-slate-950 text-blue-200 font-extrabold px-2.5 py-1 rounded-full">Bloco A</span>
+              </div>
+              <div>
+                <h3 class="text-xl font-black">2. Secretaria</h3>
+                <p class="text-xs font-semibold opacity-90 mt-1">Atendimento &amp; Matrículas</p>
+              </div>
+            </button>
+
+            <!-- 3. Sala de Aula -->
+            <button id="map-btn-sala" onclick="selectRoom('sala')" class="room-btn bg-indigo-600 hover:bg-indigo-500 text-white p-5 rounded-2xl font-bold flex flex-col justify-between h-40 border-4 border-indigo-700 transition-all text-left shadow-lg group focus:outline-none" aria-label="Ambiente 3: Sala de Aula. Espaço de aprendizado e aulas teóricas.">
+              <div class="flex justify-between items-start w-full">
+                <span class="text-3xl" aria-hidden="true">📚</span>
+                <span class="badge-contrast text-xs bg-slate-950 text-indigo-200 font-extrabold px-2.5 py-1 rounded-full">Bloco B</span>
+              </div>
+              <div>
+                <h3 class="text-xl font-black">3. Sala de Aula</h3>
+                <p class="text-xs font-semibold opacity-90 mt-1">Estudo &amp; Aulas Teóricas</p>
+              </div>
+            </button>
+
+            <!-- 4. Biblioteca -->
+            <button id="map-btn-biblioteca" onclick="selectRoom('biblioteca')" class="room-btn bg-purple-600 hover:bg-purple-500 text-white p-5 rounded-2xl font-bold flex flex-col justify-between h-40 border-4 border-purple-700 transition-all text-left shadow-lg group focus:outline-none" aria-label="Ambiente 4: Biblioteca. Acervo de livros e estudos silenciosos.">
+              <div class="flex justify-between items-start w-full">
+                <span class="text-3xl" aria-hidden="true">📖</span>
+                <span class="badge-contrast text-xs bg-slate-950 text-purple-200 font-extrabold px-2.5 py-1 rounded-full">Bloco B</span>
+              </div>
+              <div>
+                <h3 class="text-xl font-black">4. Biblioteca</h3>
+                <p class="text-xs font-semibold opacity-90 mt-1">Acervo &amp; Leitura Silenciosa</p>
+              </div>
+            </button>
+
+            <!-- 5. Banheiro -->
+            <button id="map-btn-banheiro" onclick="selectRoom('banheiro')" class="room-btn bg-teal-600 hover:bg-teal-500 text-white p-5 rounded-2xl font-bold flex flex-col justify-between h-40 border-4 border-teal-700 transition-all text-left shadow-lg group focus:outline-none" aria-label="Ambiente 5: Banheiro. Instalações sanitárias adaptadas e acessíveis.">
+              <div class="flex justify-between items-start w-full">
+                <span class="text-3xl" aria-hidden="true">🚻</span>
+                <span class="badge-contrast text-xs bg-slate-950 text-teal-200 font-extrabold px-2.5 py-1 rounded-full">Central</span>
+              </div>
+              <div>
+                <h3 class="text-xl font-black">5. Banheiro</h3>
+                <p class="text-xs font-semibold opacity-90 mt-1">Sanitários Acessíveis PWD</p>
+              </div>
+            </button>
+
+            <!-- 6. Refeitório -->
+            <button id="map-btn-refeitorio" onclick="selectRoom('refeitorio')" class="room-btn bg-rose-600 hover:bg-rose-500 text-white p-5 rounded-2xl font-bold flex flex-col justify-between h-40 border-4 border-rose-700 transition-all text-left shadow-lg group focus:outline-none" aria-label="Ambiente 6: Refeitório. Área de alimentação e convivência.">
+              <div class="flex justify-between items-start w-full">
+                <span class="text-3xl" aria-hidden="true">🍽️</span>
+                <span class="badge-contrast text-xs bg-slate-950 text-rose-200 font-extrabold px-2.5 py-1 rounded-full">Bloco C</span>
+              </div>
+              <div>
+                <h3 class="text-xl font-black">6. Refeitório</h3>
+                <p class="text-xs font-semibold opacity-90 mt-1">Alimentação &amp; Lanches</p>
+              </div>
+            </button>
+
+            <!-- 7. Pátio -->
+            <button id="map-btn-patio" onclick="selectRoom('patio')" class="room-btn bg-emerald-600 hover:bg-emerald-500 text-white p-5 rounded-2xl font-bold flex flex-col justify-between h-40 border-4 border-emerald-700 transition-all text-left shadow-lg group focus:outline-none" aria-label="Ambiente 7: Pátio. Espaço aberto para recreação e convivência ao ar livre.">
+              <div class="flex justify-between items-start w-full">
+                <span class="text-3xl" aria-hidden="true">🌳</span>
+                <span class="badge-contrast text-xs bg-slate-950 text-emerald-200 font-extrabold px-2.5 py-1 rounded-full">Zona Norte</span>
+              </div>
+              <div>
+                <h3 class="text-xl font-black">7. Pátio</h3>
+                <p class="text-xs font-semibold opacity-90 mt-1">Recreação &amp; Área Verde</p>
+              </div>
+            </button>
+
+            <!-- 8. Sala dos Professores -->
+            <button id="map-btn-professores" onclick="selectRoom('professores')" class="room-btn bg-cyan-600 hover:bg-cyan-500 text-white p-5 rounded-2xl font-bold flex flex-col justify-between h-40 border-4 border-cyan-700 transition-all text-left shadow-lg group focus:outline-none" aria-label="Ambiente 8: Sala dos Professores. Espaço pedagógico e descanso docente.">
+              <div class="flex justify-between items-start w-full">
+                <span class="text-3xl" aria-hidden="true">👩‍🏫</span>
+                <span class="badge-contrast text-xs bg-slate-950 text-cyan-200 font-extrabold px-2.5 py-1 rounded-full">Bloco A</span>
+              </div>
+              <div>
+                <h3 class="text-xl font-black">8. Professores</h3>
+                <p class="text-xs font-semibold opacity-90 mt-1">Planejamento &amp; Descanso</p>
+              </div>
+            </button>
+
+          </div>
+        </div>
+
+        <!-- PAINEL DE INFORMAÇÃO DETALHADA DO AMBIENTE SELECIONADO -->
+        <div id="details-panel" class="bg-slate-50 border-2 border-slate-300 rounded-3xl p-6 sm:p-8 shadow-md" transition-all>
+          <div class="flex flex-col md:flex-row gap-6 items-start">
+            <div id="detail-icon-box" class="w-20 h-20 sm:w-24 sm:h-24 bg-amber-500 text-slate-950 rounded-2xl flex items-center justify-center text-4xl sm:text-5xl shrink-0 font-bold shadow-inner">
+              🏫
+            </div>
+            <div class="space-y-3 flex-grow">
+              <div class="flex flex-wrap items-center gap-3">
+                <h3 id="detail-title" class="text-2xl sm:text-3xl font-black text-slate-900">
+                  1. Entrada da Escola
+                </h3>
+                <span id="detail-zone" class="bg-slate-900 text-amber-300 text-xs font-extrabold px-3 py-1 rounded-full">
+                  Zona Sul
+                </span>
+              </div>
+              <p id="detail-desc" class="text-base sm:text-lg text-slate-700 leading-relaxed font-medium">
+                Ponto de acesso principal da instituição. Conta com recepção para controle de visitantes, catracas acessíveis e rampa de acesso com corrimão duplo.
+              </p>
+              <div class="bg-white p-4 rounded-xl border border-slate-200 space-y-2 text-sm text-slate-800">
+                <p id="detail-accessibility" class="font-semibold text-school-800 flex items-center gap-2">
+                  <span>♿ Recurso de Acessibilidade:</span> Pista tátil até a recepção e rampa de inclinação suave.
+                </p>
+                <p id="detail-tip" class="text-slate-600 italic">
+                  💡 Dica de Localização: Fica localizada logo na chegada pela rua principal da escola.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SEÇÃO CARDS DE AMBIENTES DA ESCOLA -->
+    <section id="ambientes" class="py-16 bg-slate-100 border-b border-slate-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+        
+        <div class="text-center space-y-3">
+          <h2 class="text-2xl sm:text-4xl font-extrabold text-slate-900">
+            Descrição de Todos os Ambientes
+          </h2>
+          <p class="text-slate-600 text-base sm:text-lg max-w-2xl mx-auto">
+            Conheça as características, funções e equipamentos de cada espaço escolar.
+          </p>
+        </div>
+
+        <!-- GRID DOS CARDS DE AMBIENTES -->
+        <div id="ambientes-cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <!-- Gerado dinamicamente via JS com os 8 ambientes -->
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SEÇÃO BOAS PRÁTICAS DE ACESSIBILIDADE WCAG -->
+    <section id="acessibilidade" class="py-16 bg-white border-b border-slate-200">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        
+        <div class="text-center space-y-3">
+          <h2 class="text-2xl sm:text-4xl font-extrabold text-slate-900">
+            ♿ Recursos de Acessibilidade Adotados
+          </h2>
+          <p class="text-slate-600 text-lg">
+            Compromisso com o Desenho Universal e navegação inclusiva para todas as pessoas.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          
+          <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-3">
+            <div class="w-12 h-12 bg-sky-100 text-sky-800 rounded-xl flex items-center justify-center text-2xl font-bold">
+              👁️
+            </div>
+            <h3 class="text-xl font-bold text-slate-900">Multimodalidade Visual</h3>
+            <p class="text-slate-600 text-sm leading-relaxed">
+              Sem dependência exclusiva de cores: todos os ambientes utilizam símbolos visuais (emojis/ícones), nomes por extenso e identificação numérica.
+            </p>
+          </div>
+
+          <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-3">
+            <div class="w-12 h-12 bg-amber-100 text-amber-800 rounded-xl flex items-center justify-center text-2xl font-bold">
+              ⌨️
+            </div>
+            <h3 class="text-xl font-bold text-slate-900">Navegação por Teclado</h3>
+            <p class="text-slate-600 text-sm leading-relaxed">
+              Foco bem destacado e legível em cada botão e link com suporte total a teclas <kbd class="px-1.5 py-0.5 bg-slate-200 rounded">Tab</kbd> e <kbd class="px-1.5 py-0.5 bg-slate-200 rounded">Enter</kbd>.
+            </p>
+          </div>
+
+          <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-3">
+            <div class="w-12 h-12 bg-emerald-100 text-emerald-800 rounded-xl flex items-center justify-center text-2xl font-bold">
+              📢
+            </div>
+            <h3 class="text-xl font-bold text-slate-900">Suporte a Leitores de Tela</h3>
+            <p class="text-slate-600 text-sm leading-relaxed">
+              Estrutura semântica HTML5 (`header`, `main`, `nav`, `section`, `footer`) com marcação de diretrizes `aria-label` e regiões `aria-live`.
+            </p>
+          </div>
+
+          <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-3">
+            <div class="w-12 h-12 bg-purple-100 text-purple-800 rounded-xl flex items-center justify-center text-2xl font-bold">
+              🔍
+            </div>
+            <h3 class="text-xl font-bold text-slate-900">Ajustes Dinâmicos de Texto</h3>
+            <p class="text-slate-600 text-sm leading-relaxed">
+              Controles de ampliação de fonte na barra superior para facilitar a leitura de pessoas com baixa visão ou presbiopia.
+            </p>
+          </div>
+
+          <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-3">
+            <div class="w-12 h-12 bg-indigo-100 text-indigo-800 rounded-xl flex items-center justify-center text-2xl font-bold">
+              ☯️
+            </div>
+            <h3 class="text-xl font-bold text-slate-900">Modo de Alto Contraste</h3>
+            <p class="text-slate-600 text-sm leading-relaxed">
+              Alternador para esquema de alto contraste em preto e amarelo neon para garantir visualização nítida em qualquer monitor.
+            </p>
+          </div>
+
+          <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-3">
+            <div class="w-12 h-12 bg-rose-100 text-rose-800 rounded-xl flex items-center justify-center text-2xl font-bold">
+              📱
+            </div>
+            <h3 class="text-xl font-bold text-slate-900">Design 100% Responsivo</h3>
+            <p class="text-slate-600 text-sm leading-relaxed">
+              Interface adaptável para smartphones, tablets e computadores desktop com touch de tamanho adequado para toque fácil.
+            </p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- SEÇÃO SOBRE O PROJETO -->
+    <section id="sobre" class="py-16 bg-slate-50">
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+        
+        <div class="text-center space-y-2">
+          <h2 class="text-2xl sm:text-4xl font-extrabold text-slate-900">
+            Sobre o Projeto do Mapa Escolar
+          </h2>
+          <p class="text-slate-600 text-base sm:text-lg">
+            Construído para garantir inclusão, autonomia e cidadania no ambiente educacional.
+          </p>
+        </div>
+
+        <div class="bg-white p-8 rounded-3xl border border-slate-200 space-y-4 text-slate-700 leading-relaxed text-base">
+          <p>
+            O <strong>Mapa Escolar Acessível</strong> foi projetado com o propósito de permitir que estudantes novos, alunos com deficiência visual, neurodivergentes e visitantes consigam se orientar facilmente dentro da instituição de ensino.
+          </p>
+          <p>
+            A combinação de <strong>símbolos gráficos padronizados</strong>, <strong>textos descritivos curtos e objetivos</strong>, <strong>cores de alto contraste</strong> e <strong>caminhos lógicos de navegação</strong> transforma o espaço físico da escola em um ambiente legível e acolhedor.
+          </p>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- RODAPÉ -->
+  <footer class="bg-slate-900 text-slate-300 py-12 border-t border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
+      
+      <div class="text-center md:text-left space-y-1">
+        <p class="text-xl font-bold text-white">Mapa Escolar Acessível</p>
+        <p class="text-sm text-slate-400">Desenvolvido em conformidade com os padrões de acessibilidade web (WCAG 2.1).</p>
+      </div>
+
+      <nav aria-label="Links do Rodapé" class="flex flex-wrap justify-center gap-6 text-sm font-semibold">
+        <a href="#inicio" class="hover:text-amber-400 underline-offset-4 hover:underline">Início</a>
+        <a href="#mapa" class="hover:text-amber-400 underline-offset-4 hover:underline">Mapa</a>
+        <a href="#ambientes" class="hover:text-amber-400 underline-offset-4 hover:underline">Ambientes</a>
+        <a href="#acessibilidade" class="hover:text-amber-400 underline-offset-4 hover:underline">Acessibilidade</a>
+        <a href="#sobre" class="hover:text-amber-400 underline-offset-4 hover:underline">Sobre</a>
+      </nav>
+
+      <div class="text-xs text-slate-400 text-center md:text-right">
+        <p>&copy; 2026 Projeto de Orientação Escolar Acessível.</p>
+        <p>Todos os direitos reservados.</p>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- SCRIPT DE LÓGICA E INTERATIVIDADE -->
+  <script>
+    // BASE DE DADOS DOS 8 AMBIENTES REQUERIDOS
+    const schoolRooms = {
+      entrada: {
+        name: '1. Entrada da Escola',
+        icon: '🏫',
+        zone: 'Zona Sul - Entrada Principal',
+        colorClass: 'bg-amber-500',
+        textColorClass: 'text-slate-950',
+        desc: 'Ponto de acesso principal e recepção para acolhimento de alunos, professores e visitantes. Possui portaria com identificação e controle de acesso.',
+        accessibility: 'Rampa de acesso com inclinação suave, piso tátil direcionável e guichê de atendimento em altura acessível para cadeirantes.',
+        tip: 'Localizada no portão frontal da escola, em frente à via principal.'
+      },
+      secretaria: {
+        name: '2. Secretaria Acadêmica',
+        icon: '🏢',
+        zone: 'Bloco A - Térreo',
+        colorClass: 'bg-blue-600',
+        textColorClass: 'text-white',
+        desc: 'Espaço de atendimento administrativo responsável por matrículas, emissão de documentos escolares, histórico de notas e informações gerais.',
+        accessibility: 'Balcão de atendimento com rebaixamento acessível, sinalização sonora na porta e placas com textos em braille.',
+        tip: 'Situada no Bloco A, imediatamente à esquerda após a Entrada Principal.'
+      },
+      sala: {
+        name: '3. Sala de Aula',
+        icon: '📚',
+        zone: 'Bloco B - Salas de Estudo',
+        colorClass: 'bg-indigo-600',
+        textColorClass: 'text-white',
+        desc: 'Ambiente didático preparado para o aprendizado diário, aulas teóricas, apresentações de trabalhos e atividades pedagógicas em grupo.',
+        accessibility: 'Carteiras escolares adaptáveis para usuários de cadeira de rodas, iluminação LED homogênea e boa acústica.',
+        tip: 'Localizada no corredor central do Bloco B, com numeração visível acima da porta.'
+      },
+      biblioteca: {
+        name: '4. Biblioteca Escolar',
+        icon: '📖',
+        zone: 'Bloco B - Ala Silenciosa',
+        colorClass: 'bg-purple-600',
+        textColorClass: 'text-white',
+        desc: 'Acervo diversificado de livros educativos, literatura e enciclopédias. Oferece espaço silencioso para estudo individual e computadores para pesquisa.',
+        accessibility: 'Corredores largos entre as estantes de livros, acervo em áudio (audiolivros) e computadores adaptados com leitores de tela.',
+        tip: 'Posicionada ao final do corredor do Bloco B, área reservada para tranquilidade.'
+      },
+      banheiro: {
+        name: '5. Banheiros Acessíveis',
+        icon: '🚻',
+        zone: 'Área Central - Todos os Blocos',
+        colorClass: 'bg-teal-600',
+        textColorClass: 'text-white',
+        desc: 'Instalações sanitárias femininas, masculinas e cabines adaptadas individuais para pessoas com deficiência ou mobilidade reduzida.',
+        accessibility: 'Barras de apoio em aço inox, torneiras com acionamento por alavanca/sensor, porta ampla e botão de alarme de emergência.',
+        tip: 'Localizado no pátio central e próximo a todas as alas de salas de aula.'
+      },
+      refeitorio: {
+        name: '6. Refeitório e Cantina',
+        icon: '🍽️',
+        zone: 'Bloco C - Convivência',
+        colorClass: 'bg-rose-600',
+        textColorClass: 'text-white',
+        desc: 'Área voltada para refeições diárias, lanches nos intervalos e momento de interação social entre a comunidade escolar.',
+        accessibility: 'Mesas com vão livre para encaixe de cadeiras de rodas, pista de buffet em altura adequada e piso antiderrapante.',
+        tip: 'Localizado no Bloco C, adjacente ao pátio descoberto.'
+      },
+      patio: {
+        name: '7. Pátio Escolar e Área Verde',
+        icon: '🌳',
+        zone: 'Zona Norte - Área Aberta',
+        colorClass: 'bg-emerald-600',
+        textColorClass: 'text-white',
+        desc: 'Espaço amplo e aberto rodeado por árvores, ideal para recreação nos intervalos, momentos de descanso, feiras e eventos comemorativos.',
+        accessibility: 'Piso plano sem degraus pontiagudos, bancos com apoio para as costas e rotas de circulação desobstruídas.',
+        tip: 'Área central ao ar livre situada entre o Bloco B e o Refeitório.'
+      },
+      professores: {
+        name: '8. Sala dos Professores',
+        icon: '👩‍🏫',
+        zone: 'Bloco A - Área Pedagógica',
+        colorClass: 'bg-cyan-600',
+        textColorClass: 'text-white',
+        desc: 'Espaço destinado ao planejamento pedagógico dos docentes, reuniões de equipe, correção de avaliações e descanso durante os intervalos.',
+        accessibility: 'Mobiliário ergonômico, sinalização clara na entrada e iluminação adequada para trabalho e leitura.',
+        tip: 'Localizada no Bloco A, ao lado do setor de coordenação pedagógica.'
+      }
+    };
+
+    // ELEMENTOS DOM
+    const detailTitle = document.getElementById('detail-title');
+    const detailZone = document.getElementById('detail-zone');
+    const detailDesc = document.getElementById('detail-desc');
+    const detailAccessibility = document.getElementById('detail-accessibility');
+    const detailTip = document.getElementById('detail-tip');
+    const detailIconBox = document.getElementById('detail-icon-box');
+    const srAnnouncer = document.getElementById('sr-announcer');
+    const searchInput = document.getElementById('room-search');
+    const clearSearchBtn = document.getElementById('btn-clear-search');
+
+    // SELECIONAR AMBIENTE E ATUALIZAR PAINEL
+    function selectRoom(key) {
+      const room = schoolRooms[key];
+      if (!room) return;
+
+      // Remover classe de destaque de todos os botões do mapa
+      document.querySelectorAll('.room-btn').forEach(btn => {
+        btn.classList.remove('ring-4', 'ring-sky-400', 'scale-105');
+      });
+
+      // Adicionar destaque no botão ativo
+      const activeBtn = document.getElementById(`map-btn-${key}`);
+      if (activeBtn) {
+        activeBtn.classList.add('ring-4', 'ring-sky-400', 'scale-105');
+      }
+
+      // Atualizar Painel de Detalhes
+      detailTitle.textContent = room.name;
+      detailZone.textContent = room.zone;
+      detailDesc.textContent = room.desc;
+      detailAccessibility.innerHTML = `<span>♿ Recurso de Acessibilidade:</span> ${room.accessibility}`;
+      detailTip.textContent = `💡 Dica de Localização: ${room.tip}`;
+      detailIconBox.textContent = room.icon;
+      detailIconBox.className = `w-20 h-20 sm:w-24 sm:h-24 ${room.colorClass} ${room.textColorClass} rounded-2xl flex items-center justify-center text-4xl sm:text-5xl shrink-0 font-bold shadow-md`;
+
+      // Anunciar ao leitor de tela
+      announceToScreenReader(`Ambiente selecionado: ${room.name}. ${room.desc}`);
+    }
+
+    // ANÚNCIO PARA LEITORES DE TELA
+    function announceToScreenReader(message) {
+      srAnnouncer.textContent = message;
+    }
+
+    // RENDERIZAR CARDS DOS 8 AMBIENTES NA SEÇÃO INFERIOR
+    function renderAmbientesCards() {
+      const grid = document.getElementById('ambientes-cards-grid');
+      grid.innerHTML = '';
+
+      Object.keys(schoolRooms).forEach((key) => {
+        const room = schoolRooms[key];
+
+        const card = document.createElement('article');
+        card.className = 'bg-white rounded-2xl border-2 border-slate-200 p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow space-y-4';
+
+        card.innerHTML = `
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-3xl p-2.5 rounded-xl bg-slate-100 border border-slate-200" aria-hidden="true">${room.icon}</span>
+              <span class="text-xs font-extrabold bg-slate-900 text-white px-2.5 py-1 rounded-full">${room.zone}</span>
+            </div>
+            <h3 class="text-xl font-extrabold text-slate-900">${room.name}</h3>
+            <p class="text-sm text-slate-600 leading-relaxed font-medium">${room.desc}</p>
+          </div>
+
+          <div class="pt-2 border-t border-slate-100 space-y-3">
+            <p class="text-xs text-school-800 font-bold">
+              ♿ ${room.accessibility}
+            </p>
+            <button onclick="selectRoomAndScroll('${key}')" class="w-full bg-slate-900 hover:bg-school-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-colors flex items-center justify-center gap-2" aria-label="Localizar ${room.name} no mapa interativo">
+              <span>Localizar no mapa</span>
+              <span aria-hidden="true">📍</span>
+            </button>
+          </div>
+        `;
+
+        grid.appendChild(card);
+      });
+    }
+
+    function selectRoomAndScroll(key) {
+      selectRoom(key);
+      const mapaSec = document.getElementById('mapa');
+      mapaSec.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // PESQUISA DE SALA EM TEMPO REAL
+    searchInput.addEventListener('input', () => {
+      const term = searchInput.value.toLowerCase().trim();
+      if (!term) return;
+
+      const keys = Object.keys(schoolRooms);
+      const matchedKey = keys.find(k => {
+        const r = schoolRooms[k];
+        return r.name.toLowerCase().includes(term) || 
+               r.desc.toLowerCase().includes(term) ||
+               r.zone.toLowerCase().includes(term);
+      });
+
+      if (matchedKey) {
+        selectRoom(matchedKey);
+      }
+    });
+
+    clearSearchBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      selectRoom('entrada');
+      searchInput.focus();
+    });
+
+    // CONTROLES DE FONTE E CONTRASTE
+    let fontScale = 1;
+    document.getElementById('btn-increase-font').addEventListener('click', () => {
+      if (fontScale < 1.3) {
+        fontScale += 0.1;
+        document.documentElement.style.fontSize = `${fontScale * 100}%`;
+        announceToScreenReader('Tamanho da fonte aumentado.');
+      }
+    });
+
+    document.getElementById('btn-decrease-font').addEventListener('click', () => {
+      if (fontScale > 0.8) {
+        fontScale -= 0.1;
+        document.documentElement.style.fontSize = `${fontScale * 100}%`;
+        announceToScreenReader('Tamanho da fonte diminuído.');
+      }
+    });
+
+    document.getElementById('btn-reset-font').addEventListener('click', () => {
+      fontScale = 1;
+      document.documentElement.style.fontSize = '100%';
+      announceToScreenReader('Tamanho da fonte redefinido.');
+    });
+
+    const contrastBtn = document.getElementById('btn-toggle-contrast');
+    contrastBtn.addEventListener('click', () => {
+      document.body.classList.toggle('high-contrast');
+      const active = document.body.classList.contains('high-contrast');
+      contrastBtn.setAttribute('aria-pressed', active ? 'true' : 'false');
+      announceToScreenReader(active ? 'Modo de Alto Contraste ativado.' : 'Modo de Alto Contraste desativado.');
+    });
+
+    // MENU MOBILE
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const mobileMenu = document.getElementById('mobile-menu');
+    const iconOpen = document.getElementById('menu-icon-open');
+    const iconClose = document.getElementById('menu-icon-close');
+
+    mobileMenuBtn.addEventListener('click', () => {
+      const expanded = mobileMenuBtn.getAttribute('aria-expanded') === 'true';
+      mobileMenuBtn.setAttribute('aria-expanded', !expanded);
+      mobileMenu.classList.toggle('hidden');
+      iconOpen.classList.toggle('hidden');
+      iconClose.classList.toggle('hidden');
+    });
+
+    document.querySelectorAll('.mobile-nav-link').forEach(link => {
+      link.addEventListener('click', () => {
+        mobileMenu.classList.add('hidden');
+        mobileMenuBtn.setAttribute('aria-expanded', 'false');
+        iconOpen.classList.remove('hidden');
+        iconClose.classList.add('hidden');
+      });
+    });
+
+    // CARREGAMENTO INICIAL
+    window.addEventListener('DOMContentLoaded', () => {
+      renderAmbientesCards();
+      selectRoom('entrada');
+    });
+  </script>
+</body>
+</html>
